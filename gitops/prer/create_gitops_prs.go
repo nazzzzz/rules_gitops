@@ -118,55 +118,38 @@ func getGitServer(host string) git.Server {
 func executeBazelQuery(bazelCmd, query string) *analysis.CqueryResult {
 	log.Printf("Executing bazel query: %s", query)
 
+	// Execute bazel cquery with binary proto output
 	output, err := exec.Ex("", bazelCmd, "cquery",
 		"--noshow_progress",
 		"--noshow_loading_progress",
 		"--output=proto",
+		"--proto:binary", // Request binary format
 		query)
 	if err != nil {
 		log.Fatalf("bazel cquery failed: %v", err)
 	}
 
-	// Find the protobuf content
-	lines := strings.Split(output, "\n")
-	var protoContent string
-	for i, line := range lines {
-		if strings.Contains(line, "//service/notifier:notifier_dev.gitops") {
-			// Found the start of protobuf content
-			protoContent = strings.Join(lines[i:], "\n")
+	// Extract binary content after empty line
+	parts := strings.Split(output, "\n\n")
+	var protoData []byte
+	for _, part := range parts {
+		if !strings.HasPrefix(part, "(") && !strings.Contains(part, "INFO:") {
+			protoData = []byte(part)
 			break
 		}
 	}
 
-	if protoContent == "" {
+	if len(protoData) == 0 {
 		log.Printf("Raw output: %q", output)
-		log.Fatal("no protobuf content found")
+		log.Fatal("no protobuf data found in output")
 	}
 
 	result := &analysis.CqueryResult{}
-	if err := proto.Unmarshal([]byte(protoContent), result); err != nil {
-		// Try extracting just the embedded protobuf bytes
-		if bytes := extractProtobufBytes(protoContent); len(bytes) > 0 {
-			if err := proto.Unmarshal(bytes, result); err != nil {
-				log.Fatalf("failed to unmarshal extracted bytes: %v", err)
-			}
-		} else {
-			log.Fatalf("failed to extract protobuf content: %v", err)
-		}
+	if err := proto.Unmarshal(protoData, result); err != nil {
+		log.Fatalf("failed to unmarshal protobuf: %v", err)
 	}
 
 	return result
-}
-
-func extractProtobufBytes(content string) []byte {
-	// Find content between protobuf markers (typically \n\n)
-	parts := strings.Split(content, "\n\n")
-	for _, part := range parts {
-		if strings.Contains(part, "\x0A") && strings.Contains(part, "\x12") {
-			return []byte(part)
-		}
-	}
-	return nil
 }
 
 func processImages(targets []string, cfg *Config) {
