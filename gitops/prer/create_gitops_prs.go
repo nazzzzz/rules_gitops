@@ -5,13 +5,14 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"os/exec"
+	osexec "os/exec"
 	"strings"
 	"sync"
 
 	"github.com/fasterci/rules_gitops/gitops/analysis"
 	"github.com/fasterci/rules_gitops/gitops/bazel"
 	"github.com/fasterci/rules_gitops/gitops/commitmsg"
+	"github.com/fasterci/rules_gitops/gitops/exec"
 	"github.com/fasterci/rules_gitops/gitops/git"
 	"github.com/fasterci/rules_gitops/gitops/git/bitbucket"
 	"github.com/fasterci/rules_gitops/gitops/git/github"
@@ -115,7 +116,7 @@ func getGitServer(host string) git.Server {
 }
 
 func executeBazelQuery(bazelCmd, query string) *analysis.CqueryResult {
-	cmd := exec.Command("bazel", "cquery",
+	cmd := osexec.Command("bazel", "cquery",
 		"--output=proto",
 		"--noimplicit_deps",
 		query)
