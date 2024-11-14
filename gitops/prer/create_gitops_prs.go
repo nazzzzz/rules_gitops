@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/protobuf/proto"
+	proto "github.com/golang/protobuf/proto"
 
 	"github.com/fasterci/rules_gitops/gitops/analysis"
 	"github.com/fasterci/rules_gitops/gitops/bazel"
