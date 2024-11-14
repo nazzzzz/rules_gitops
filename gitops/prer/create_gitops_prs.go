@@ -117,13 +117,20 @@ func getGitServer(host string) git.Server {
 
 func executeBazelQuery(bazelCmd, query string) *analysis.CqueryResult {
 	log.Printf("Executing bazel query: %s", query)
-	output, err := exec.Ex("", bazelCmd, "cquery", query, "--output=proto")
+
+	// Run command with separate stdout/stderr
+	output, err := exec.Ex("", bazelCmd, "cquery", "--output=proto",
+		"--noshow_progress", "--noshow_loading_progress",
+		"--ui_event_filters=-info,-stdout,-stderr",
+		query)
 	if err != nil {
 		log.Fatalf("bazel query failed: %v", err)
 	}
 
+	// Parse protobuf output
 	result := &analysis.CqueryResult{}
 	if err := proto.Unmarshal([]byte(output), result); err != nil {
+		log.Printf("Raw output: %q", output)
 		log.Fatalf("failed to unmarshal query result: %v", err)
 	}
 
