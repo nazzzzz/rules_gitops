@@ -118,7 +118,6 @@ func getGitServer(host string) git.Server {
 func executeBazelQuery(bazelCmd, query string) *analysis.CqueryResult {
 	log.Printf("Executing bazel query: %s", query)
 
-	// Get protobuf output directly
 	output, err := exec.Ex("", bazelCmd, "cquery",
 		"--noshow_progress",
 		"--noshow_loading_progress",
@@ -128,13 +127,46 @@ func executeBazelQuery(bazelCmd, query string) *analysis.CqueryResult {
 		log.Fatalf("bazel cquery failed: %v", err)
 	}
 
-	result := &analysis.CqueryResult{}
-	if err := proto.Unmarshal([]byte(output), result); err != nil {
+	// Find the protobuf content
+	lines := strings.Split(output, "\n")
+	var protoContent string
+	for i, line := range lines {
+		if strings.Contains(line, "//service/notifier:notifier_dev.gitops") {
+			// Found the start of protobuf content
+			protoContent = strings.Join(lines[i:], "\n")
+			break
+		}
+	}
+
+	if protoContent == "" {
 		log.Printf("Raw output: %q", output)
-		log.Fatalf("failed to unmarshal query result: %v", err)
+		log.Fatal("no protobuf content found")
+	}
+
+	result := &analysis.CqueryResult{}
+	if err := proto.Unmarshal([]byte(protoContent), result); err != nil {
+		// Try extracting just the embedded protobuf bytes
+		if bytes := extractProtobufBytes(protoContent); len(bytes) > 0 {
+			if err := proto.Unmarshal(bytes, result); err != nil {
+				log.Fatalf("failed to unmarshal extracted bytes: %v", err)
+			}
+		} else {
+			log.Fatalf("failed to extract protobuf content: %v", err)
+		}
 	}
 
 	return result
+}
+
+func extractProtobufBytes(content string) []byte {
+	// Find content between protobuf markers (typically \n\n)
+	parts := strings.Split(content, "\n\n")
+	for _, part := range parts {
+		if strings.Contains(part, "\x0A") && strings.Contains(part, "\x12") {
+			return []byte(part)
+		}
+	}
+	return nil
 }
 
 func processImages(targets []string, cfg *Config) {
