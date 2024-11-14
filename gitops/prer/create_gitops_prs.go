@@ -118,36 +118,20 @@ func getGitServer(host string) git.Server {
 func executeBazelQuery(bazelCmd, query string) *analysis.CqueryResult {
 	log.Printf("Executing bazel query: %s", query)
 
-	// First get the target using aquery
-	output, err := exec.Ex("", bazelCmd, "query", "--output=label", query)
+	// Get protobuf output directly
+	output, err := exec.Ex("", bazelCmd, "cquery",
+		"--noshow_progress",
+		"--noshow_loading_progress",
+		"--output=proto",
+		query)
 	if err != nil {
-		log.Fatalf("bazel query failed: %v", err)
+		log.Fatalf("bazel cquery failed: %v", err)
 	}
 
-	// Then get the proto output for each target
-	targets := strings.Split(strings.TrimSpace(output), "\n")
 	result := &analysis.CqueryResult{}
-
-	for _, target := range targets {
-		if target == "" {
-			continue
-		}
-		protoOutput, err := exec.Ex("", bazelCmd, "cquery", target, "--output=proto")
-		if err != nil {
-			log.Printf("Failed to query target %s: %v", target, err)
-			continue
-		}
-
-		targetResult := &analysis.CqueryResult{}
-		if err := proto.Unmarshal([]byte(protoOutput), targetResult); err != nil {
-			log.Printf("Target %s proto output: %q", target, protoOutput)
-			continue
-		}
-		result.Results = append(result.Results, targetResult.Results...)
-	}
-
-	if len(result.Results) == 0 {
-		log.Fatal("no valid targets found")
+	if err := proto.Unmarshal([]byte(output), result); err != nil {
+		log.Printf("Raw output: %q", output)
+		log.Fatalf("failed to unmarshal query result: %v", err)
 	}
 
 	return result
