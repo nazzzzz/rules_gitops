@@ -5,20 +5,19 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"os/exec"
 	"strings"
 	"sync"
-
-	proto "github.com/golang/protobuf/proto"
 
 	"github.com/fasterci/rules_gitops/gitops/analysis"
 	"github.com/fasterci/rules_gitops/gitops/bazel"
 	"github.com/fasterci/rules_gitops/gitops/commitmsg"
-	"github.com/fasterci/rules_gitops/gitops/exec"
 	"github.com/fasterci/rules_gitops/gitops/git"
 	"github.com/fasterci/rules_gitops/gitops/git/bitbucket"
 	"github.com/fasterci/rules_gitops/gitops/git/github"
 	"github.com/fasterci/rules_gitops/gitops/git/github_app"
 	"github.com/fasterci/rules_gitops/gitops/git/gitlab"
+	proto "github.com/golang/protobuf/proto"
 )
 
 // Config holds all command line configuration
@@ -116,36 +115,18 @@ func getGitServer(host string) git.Server {
 }
 
 func executeBazelQuery(bazelCmd, query string) *analysis.CqueryResult {
-	log.Printf("Executing bazel query: %s", query)
-
-	// Execute bazel cquery with binary proto output
-	output, err := exec.Ex("", bazelCmd, "cquery",
-		"--noshow_progress",
-		"--noshow_loading_progress",
+	cmd := exec.Command("bazel", "cquery",
 		"--output=proto",
-		"--proto:binary", // Request binary format
+		"--noimplicit_deps",
 		query)
+
+	output, err := cmd.Output()
 	if err != nil {
-		log.Fatalf("bazel cquery failed: %v", err)
-	}
-
-	// Extract binary content after empty line
-	parts := strings.Split(output, "\n\n")
-	var protoData []byte
-	for _, part := range parts {
-		if !strings.HasPrefix(part, "(") && !strings.Contains(part, "INFO:") {
-			protoData = []byte(part)
-			break
-		}
-	}
-
-	if len(protoData) == 0 {
-		log.Printf("Raw output: %q", output)
 		log.Fatal("no protobuf data found in output")
 	}
 
 	result := &analysis.CqueryResult{}
-	if err := proto.Unmarshal(protoData, result); err != nil {
+	if err := proto.Unmarshal(output, result); err != nil {
 		log.Fatalf("failed to unmarshal protobuf: %v", err)
 	}
 
