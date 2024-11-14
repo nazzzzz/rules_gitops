@@ -22,10 +22,6 @@ import (
 	"github.com/fasterci/rules_gitops/gitops/exec"
 )
 
-var (
-	git = "git"
-)
-
 // Clone clones a repository. Pass the full repository name, such as
 // "https://aleksey.pesternikov@bitbucket.tubemogul.info/scm/tm/repo.git" as the repo.
 // Cloned directory will be clean of local changes with primaryBranch branch checked out.
