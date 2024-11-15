@@ -115,7 +115,7 @@ func getGitServer(host string) git.Server {
 	return server
 }
 
-func executeBazelQuery(bazelCmd, query string) *analysis.CqueryResult {
+func executeBazelQuery(query string) *analysis.CqueryResult {
 	cmd := osexec.Command("bazel", "cquery",
 		"--output=proto",
 		"--noimplicit_deps",
@@ -154,7 +154,7 @@ func processImages(targets []string, cfg *Config) {
 	}
 
 	query := strings.Join(queries, " union ")
-	result := executeBazelQuery(cfg.BazelCmd, query)
+	result := executeBazelQuery(query)
 
 	// Process targets in parallel
 	targetChan := make(chan string)
@@ -224,7 +224,7 @@ func main() {
 	query := fmt.Sprintf("attr(deployment_branch, \".+\", attr(release_branch_prefix, \"%s\", kind(gitops, %s)))",
 		cfg.ReleaseBranch, cfg.Targets)
 
-	result := executeBazelQuery(cfg.BazelCmd, query)
+	result := executeBazelQuery(query)
 
 	trains := make(map[string][]string)
 	for _, t := range result.Results {
@@ -284,6 +284,10 @@ func main() {
 
 		commitMsg := fmt.Sprintf("GitOps for release branch %s from %s commit %s\n%s",
 			cfg.ReleaseBranch, cfg.BranchName, cfg.GitCommit, commitmsg.Generate(targets))
+
+		if !workdir.IsClean() {
+			fmt.Println(workdir.GetModifiedFiles())
+		}
 
 		if workdir.Commit(commitMsg, cfg.GitOpsPath) {
 			log.Printf("Branch %s has changes, push required", branch)
