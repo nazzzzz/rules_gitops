@@ -317,7 +317,7 @@ func main() {
 	if !cfg.DryRun {
 		commitMsg := fmt.Sprintf("GitOps for release branch %s from %s commit %s\n",
 			cfg.ReleaseBranch, cfg.BranchName, cfg.GitCommit)
-		github_app.CreateCommit(cfg.PRTargetBranch, cfg.BranchName, cfg.GitOpsPath, modifiedFiles, commitMsg)
+		github_app.CreateCommit(cfg.PRTargetBranch, cfg.BranchName, gitopsDir, modifiedFiles, commitMsg)
 		// workdir.Push(updatedBranches)
 	}
 
