@@ -286,9 +286,9 @@ func main() {
 			cfg.ReleaseBranch, cfg.BranchName, cfg.GitCommit, commitmsg.Generate(targets))
 
 		if !workdir.IsClean() {
-			fmt.Println("executing get modified files")
-			fmt.Println(workdir.GetModifiedFiles())
-			fmt.Println("finishing get modified files")
+			log.Println("executing get modified files")
+			log.Println(workdir.GetModifiedFiles())
+			log.Println("finishing get modified files")
 		}
 
 		if workdir.Commit(commitMsg, cfg.GitOpsPath) {
