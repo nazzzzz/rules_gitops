@@ -139,7 +139,9 @@ func (r *Repo) GetModifiedFiles() ([]string, error) {
 			// git status --porcelain output format is "XY filename"
 			// where X and Y are status codes
 			// We just want the filename part
-			files = append(files, strings.TrimSpace(line[3:]))
+			file := strings.TrimSpace(line[3:])
+			files = append(files, file)
+			log.Printf("Modified file: %s", file)
 		}
 	}
 
