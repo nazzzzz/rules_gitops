@@ -113,7 +113,7 @@ func createPR(ctx context.Context, gh *github.Client, baseBranch string, commitB
 		Title:               &prSubject,
 		Head:                &commitBranch,
 		HeadRepo:            &baseBranch,
-		Base:                &commitBranch,
+		Base:                &baseBranch,
 		Body:                &prDescription,
 		MaintainerCanModify: github.Bool(true),
 	}
