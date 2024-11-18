@@ -1,6 +1,7 @@
 package github_app
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"flag"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/ProtonMail/go-crypto/openpgp"
 	"github.com/bradleyfalzon/ghinstallation/v2"
 	"github.com/google/go-github/v58/github"
 )
@@ -201,6 +203,24 @@ func pushCommit(ctx context.Context, gh *github.Client, ref *github.Reference, t
 	author := &github.CommitAuthor{Date: &github.Timestamp{Time: date}, Name: gitHubAppName, Email: &authorEmail}
 	commit := &github.Commit{Author: author, Message: &commitMessage, Tree: tree, Parents: []*github.Commit{parent.Commit}}
 	opts := github.CreateCommitOptions{}
+
+	if *privateKey != "" {
+		armoredBlock, e := os.ReadFile(*privateKey)
+		if e != nil {
+			log.Fatalf("failed to read private key: %v", e)
+		}
+		keyring, e := openpgp.ReadArmoredKeyRing(bytes.NewReader(armoredBlock))
+		if e != nil {
+			log.Fatalf("failed to read private key: %v", e)
+		}
+		if len(keyring) != 1 {
+			log.Fatal("expected exactly one key in the keyring")
+		}
+		key := keyring[0]
+		opts.Signer = github.MessageSignerFunc(func(w io.Writer, r io.Reader) error {
+			return openpgp.ArmoredDetachSign(w, key, r, nil)
+		})
+	}
 
 	newCommit, _, err := gh.Git.CreateCommit(ctx, *repoOwner, *repo, commit, &opts)
 	if err != nil {
