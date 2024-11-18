@@ -4,7 +4,7 @@ import (
 	"context"
 	"errors"
 	"flag"
-	"io/ioutil"
+	"io"
 	"log"
 	"net/http"
 
@@ -81,7 +81,7 @@ func CreatePR(from, to, title, body string) error {
 
 	// All other github responses
 	defer resp.Body.Close()
-	responseBody, readingErr := ioutil.ReadAll(resp.Body)
+	responseBody, readingErr := io.ReadAll(resp.Body)
 	if readingErr != nil {
 		log.Println("cannot read response body")
 	} else {
