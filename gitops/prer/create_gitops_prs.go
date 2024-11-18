@@ -255,6 +255,7 @@ func main() {
 
 	var updatedTargets []string
 	var updatedBranches []string
+	var modifiedFiles []string
 
 	// Process each release train
 	for train, targets := range trains {
@@ -291,6 +292,14 @@ func main() {
 			log.Println("finishing get modified files")
 		}
 
+		files, err := workdir.GetModifiedFiles()
+
+		if err != nil {
+			log.Fatalf("failed to get modified files: %v", err)
+		}
+
+		modifiedFiles = append(modifiedFiles, files...)
+
 		if workdir.Commit(commitMsg, cfg.GitOpsPath) {
 			log.Printf("Branch %s has changes, push required", branch)
 			updatedTargets = append(updatedTargets, targets...)
@@ -306,7 +315,10 @@ func main() {
 	processImages(updatedTargets, cfg)
 
 	if !cfg.DryRun {
-		workdir.Push(updatedBranches)
+		commitMsg := fmt.Sprintf("GitOps for release branch %s from %s commit %s\n",
+			cfg.ReleaseBranch, cfg.BranchName, cfg.GitCommit)
+		github_app.CreateCommit(cfg.PRTargetBranch, cfg.BranchName, cfg.GitOpsPath, modifiedFiles, commitMsg)
+		// workdir.Push(updatedBranches)
 	}
 
 	createPullRequests(updatedBranches, cfg)
