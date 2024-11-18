@@ -105,6 +105,25 @@ func CreateCommit(baseBranch string, commitBranch string, gitopsPath string, fil
 	}
 
 	pushCommit(ctx, gh, ref, tree, commitMsg, *gitHubUser)
+	createPR(ctx, gh, baseBranch, commitBranch, commitMsg, "")
+}
+
+func createPR(ctx context.Context, gh *github.Client, baseBranch string, commitBranch string, prSubject string, prDescription string) {
+	newPR := &github.NewPullRequest{
+		Title:               &prSubject,
+		Head:                &commitBranch,
+		HeadRepo:            &baseBranch,
+		Base:                &commitBranch,
+		Body:                &prDescription,
+		MaintainerCanModify: github.Bool(true),
+	}
+
+	pr, _, err := gh.PullRequests.Create(ctx, *repoOwner, *repo, newPR)
+	if err != nil {
+		log.Fatalf("failed to create PR: %v", err)
+	}
+
+	log.Printf("PR created: %s\n", pr.GetHTMLURL())
 }
 
 func createGithubClient() *github.Client {

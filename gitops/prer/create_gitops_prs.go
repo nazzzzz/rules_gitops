@@ -318,10 +318,9 @@ func main() {
 		commitMsg := fmt.Sprintf("GitOps for release branch %s from %s commit %s\n",
 			cfg.ReleaseBranch, cfg.BranchName, cfg.GitCommit)
 		github_app.CreateCommit(cfg.PRTargetBranch, cfg.BranchName, gitopsDir, modifiedFiles, commitMsg)
-		// workdir.Push(updatedBranches)
 	}
 
-	createPullRequests(updatedBranches, cfg)
+	// createPullRequests(updatedBranches, cfg)
 }
 
 // SliceFlags implements flag.Value for string slice flags
